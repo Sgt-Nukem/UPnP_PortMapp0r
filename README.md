@@ -8,19 +8,19 @@ It also needs a .NET Framework 4.0 compatible .NET platform installed (client pr
 
 
 ### Usage
-<code>
-UPnP_PortMapp0r - by Sgt. Nukem, version: 0.1.3.7
-=================================================
+<pre>
+UPnP_PortMapp0r - by Sgt. Nukem, version: 0.1.3.7  
+=================================================  
 
-Usage: UPnP_PortMapp0r <command> [parameters]
+Usage: UPnP_PortMapp0r 'command' [parameters]
 
-where <command> can be:
+where 'command' can be:
   list    - lists all port mappings.
-  add     - adds a port mapping, specify parameters       <port> <protocol> <mapped-address> [mapped-port]
-  remove  - removes a port mapping, specifiy parameters   <port> <protocol>
+  add     - adds a port mapping, specify parameters       'port' 'protocol' 'mapped-address' [mapped-port]
+  remove  - removes a port mapping, specifiy parameters   'port' 'protocol'
 
 Exmaple:  > UPnP_PortMapp0r  add  443  TCP  192.168.1.200
-</code>
+</pre>
 
 
 ### Prerequisites
