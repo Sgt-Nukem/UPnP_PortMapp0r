@@ -180,7 +180,7 @@ namespace UPnP_PortMapp0r
 				if (hresult == (UInt32)HRESULT.E_USER_EXCEPTION)
 				{
 					Console.WriteLine();
-					Console.WriteLine("Hint: You will get 0x{0:X} if you provide 127.0.0.1 as mapped address (which would be the router itself)." /* " probably means you fucked up!" */, hresult);
+					Console.WriteLine("Hint: You will get 0x{0:X} if you provide an invalid address with parts missing or 127.0.0.1 (which would be the router itself)." /* " probably means you fucked up!" */, hresult);
 					Console.WriteLine();
 					Console.WriteLine();
 				}
