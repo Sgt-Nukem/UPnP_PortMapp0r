@@ -6,14 +6,19 @@ using System.Collections;
 namespace UPnP_PortMapp0r
 {
     enum HRESULT : uint
-    {
-        E_ACCESSDENIED  = 0x80070005,
-        E_FAIL          = 0x80004005,
-        E_INVALIDARG    = 0x80070057,
-        E_OUTOFMEMORY   = 0x8007000E,
-        E_UNEXPECTED    = 0x8000FFFF,
-        S_OK            = 0x0,
-        S_FALSE         = 0x1
+	{
+		// returned by NATUPNPLib
+		E_USER_EXCEPTION			= 0x80040208,
+		E_SERVICE_SPECIFIC_ERROR	= 0x8007042A,
+
+
+		E_ACCESSDENIED		= 0x80070005,
+        E_FAIL				= 0x80004005,
+        E_INVALIDARG		= 0x80070057,
+        E_OUTOFMEMORY		= 0x8007000E,
+        E_UNEXPECTED		= 0x8000FFFF,
+        S_OK				= 0x0,
+        S_FALSE				= 0x1
     }
 
 
@@ -22,7 +27,7 @@ namespace UPnP_PortMapp0r
         static void PrintHeader()
         {
 			Console.WriteLine();
-			Console.WriteLine("UPnP_PortMapp0r - by Sgt. Nukem, version: " + "0.1.3.7");
+			Console.WriteLine("UPnP_PortMapp0r - by Sgt. Nukem, version: " + "0.1.3.8");
             Console.WriteLine("=================================================" + "\n");
         }
 
@@ -56,7 +61,7 @@ namespace UPnP_PortMapp0r
 
             if( upnpNAT == null )
             {
-                FailureExit(HRESULT.E_ACCESSDENIED, "Failed to create NATUPNP library.");
+                FailureExit(HRESULT.E_ACCESSDENIED, "Failed to instantiate NATUPNP library.");
             }
 
             PrintHeader();
@@ -107,12 +112,17 @@ namespace UPnP_PortMapp0r
 
 			try
 			{
-				upnpNAT.StaticPortMappingCollection.Remove(port, protocol);
+				var portMapp0r = retrievePortMapp0rOrExit(upnpNAT);
+				portMapp0r.Remove(port, protocol);
 			}
 			catch (System.IO.FileNotFoundException exc)
 			{
 				FailureExit(HRESULT.S_FALSE, "The specified port mapping does not exist.");      // TODO: just return success then?
 			}
+
+			Console.WriteLine("OK");
+			Console.WriteLine();
+			Console.WriteLine();
 		}
 
 
@@ -142,7 +152,7 @@ namespace UPnP_PortMapp0r
 
 			string internalAddress = args[3];
 
-			// CHECK IP 6+4
+			// TODO: CHECK IP 6+4
 
 			int internalPort;
 			if (args.Length > 1 + 3)
@@ -157,60 +167,90 @@ namespace UPnP_PortMapp0r
 			}
 
 			try
-            {
-//				var peter = upnpNAT.DynamicPortMappingCollection.Count;
+			{
+				var portMapp0r = retrievePortMapp0rOrExit(upnpNAT);
+				portMapp0r.Add(port, protocol, internalPort, internalAddress, true, "UPnP_PortMapp0r");
+			}
+			catch (System.Runtime.InteropServices.COMException exception)
+			{
+				var hresult = (UInt32)exception.ErrorCode;
+				var hresultName = Enum.IsDefined(typeof(HRESULT), hresult) ? " (" + Enum.GetName(typeof(HRESULT), hresult) + ")" : "";
+				Console.WriteLine("Received error from NATUPNPLib / the router: 0x{0:X}{1}", hresult, hresultName);
+				
+				if (hresult == (UInt32)HRESULT.E_USER_EXCEPTION)
+				{
+					Console.WriteLine();
+					Console.WriteLine("Hint: You will get 0x{0:X} if you provide 127.0.0.1 as mapped address (which would be the router itself)." /* " probably means you fucked up!" */, hresult);
+					Console.WriteLine();
+					Console.WriteLine();
+				}
+				else if (hresult == (UInt32)HRESULT.E_SERVICE_SPECIFIC_ERROR)
+				{
+					Console.WriteLine();
+					Console.WriteLine("Hint: You will get 0x{0:X} if you provide a mapped address the router is either not responsible for AT ALL or the device is not connected to the router at the moment." /* " probably means you fucked up!" */, hresult);
+					Console.WriteLine();
+					Console.WriteLine();
+				}
 
-
-				var peter2 = upnpNAT.StaticPortMappingCollection.Count;
-
-				upnpNAT.StaticPortMappingCollection.Add(port, protocol, internalPort, internalAddress, true, "UPnP_PortMapp0r");// "UPnP_PortMapp0r @ ");
-				//upnpNAT.StaticPortMappingCollection.Add(port, protocol, internalPort, internalAddress, true, "UPnP_PortMapp0r @ " + DateTime.Now);
-            }
-            catch(Exception exception)
-            {
-				Console.WriteLine(exception.InnerException);
+				FailureExit(Enum.IsDefined(typeof(HRESULT), hresult) ? (HRESULT)hresult : HRESULT.S_FALSE, "Could not add port mapping. Exception: " + exception.Message);
+			}
+			catch (Exception exception)
+			{
 				FailureExit(HRESULT.S_FALSE, "Could not add port mapping. Exception: " + exception.Message);
-            }
-        }
+			}
 
-        //const string paramExternalPort = "ext";
-        //const string paramProtocol = "proto";
-        //const string paramAddress = "ip";
-        //const string paramPort = "port";
-        //const string paramDisabled = "disabled";
-        //const string paramEnabled = "enabled";
-        //const string paramDescription = "desc";
+			Console.WriteLine("OK");
+			Console.WriteLine();
+			Console.WriteLine();
+		}
 
-        //private static void ParseParameters(string[] args)
-        //{
-        //    for(int i=1; i<args.Length; i++)
-        //    {
+		//const string paramExternalPort = "ext";
+		//const string paramProtocol = "proto";
+		//const string paramAddress = "ip";
+		//const string paramPort = "port";
+		//const string paramDisabled = "disabled";
+		//const string paramEnabled = "enabled";
+		//const string paramDescription = "desc";
 
-        //    }
-        //}
+		//private static void ParseParameters(string[] args)
+		//{
+		//    for(int i=1; i<args.Length; i++)
+		//    {
 
-        private static void ListMappings(UPnPNAT upnpNAT, string[] args)
+		//    }
+		//}
+
+		private static IStaticPortMappingCollection retrievePortMapp0rOrExit(UPnPNAT upnpNAT)
+		{
+			IStaticPortMappingCollection staticMappings = upnpNAT.StaticPortMappingCollection;
+			if (staticMappings == null)
+			{
+				FailureExit(HRESULT.S_FALSE, "Could not access static port mappings from NAT router. This can happen if it does not support UPnP, UPnP is not enabled, or its security settings disallows changes to port mappings via UPnP.");
+			}
+			return staticMappings;
+		}
+
+
+
+	private static void ListMappings(UPnPNAT upnpNAT, string[] args)
         {
             if( args.Length > 1 )
             {
                 FailureExit(HRESULT.E_INVALIDARG, "Parameters not yet implemented.");
             }
 
-            IStaticPortMappingCollection staticMappings = upnpNAT.StaticPortMappingCollection;
-            if( staticMappings == null )
-            {
-                FailureExit(HRESULT.S_FALSE, "Could not retrieve static port mappings from NAT router. This can happen if it does not support UPnP (or it is not enabled).");
-            }
+			var portMapp0r = retrievePortMapp0rOrExit(upnpNAT);
 
-            Console.Write("Found " + staticMappings.Count + " port mappings");
-            if (staticMappings.Count > 0)
+
+			Console.Write("Found " + portMapp0r.Count + " port mappings");
+            if (portMapp0r.Count > 0)
             {
                 Console.WriteLine(":");
                 Console.WriteLine();
 
                 PrintPortMappingHeader();
 
-                IEnumerator enumerat0r = staticMappings.GetEnumerator();
+                IEnumerator enumerat0r = portMapp0r.GetEnumerator();
                 while( enumerat0r.MoveNext() )
                 {
                     IStaticPortMapping portMapping = enumerat0r.Current as IStaticPortMapping;
@@ -230,7 +270,8 @@ namespace UPnP_PortMapp0r
             }
 
             Console.WriteLine();
-        }
+			Console.WriteLine();
+		}
 
         private static void PrintPortMappingHeader()
         {
@@ -247,14 +288,14 @@ namespace UPnP_PortMapp0r
         {
             Console.WriteLine("| {0,16} | {1,3} | {2,15} | {3,5} | {4,15} | {5,5} | {6,3} |", portMapping.Description, portMapping.Protocol, portMapping.ExternalIPAddress, portMapping.ExternalPort,
                 portMapping.InternalClient, portMapping.InternalPort, (portMapping.Enabled ? "(X)" : "( )"));
-            //Console.WriteLine(portMapping.Description + "   " + portMapping.Protocol + "   " + portMapping.ExternalIPAddress + "   " + portMapping.ExternalPort + "   " + portMapping.InternalClient
-            //    + "   " + portMapping.InternalPort + "   " + (portMapping.Enabled ? "(X)" : "( )"));
         }
 
         private static void FailureExit(HRESULT exitCode, string exitMessage)
         {
             Console.WriteLine("Error: " + exitMessage);
-            Environment.Exit( (int)exitCode );
+			Console.WriteLine();
+			Console.WriteLine();
+			Environment.Exit( (int)exitCode );
         }
     }
 }
